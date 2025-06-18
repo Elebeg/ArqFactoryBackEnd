@@ -21,6 +21,7 @@ export class AuthController {
   @ApiResponse({ status: 409, description: 'Email ou CPF já em uso' })
   @ApiResponse({ status: 400, description: 'Dados inválidos' })
   async register(@Body() registerDto: RegisterDto): Promise<AuthResponseDto> {
+    this.logger.log('DTO recebido:', registerDto);
     this.logger.log(`Tentativa de cadastro: ${registerDto.email} / ${registerDto.cpf}`);
     try {
       const result = await this.authService.register(registerDto);
