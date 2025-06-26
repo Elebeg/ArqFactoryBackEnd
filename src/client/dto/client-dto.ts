@@ -1,39 +1,48 @@
-import { IsString, IsEmail, IsOptional, IsBoolean } from 'class-validator';
+import { IsString, IsEmail, IsOptional, IsBoolean, IsNotEmpty, Length } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 
 export class CreateClientDto {
-  @ApiProperty()
-  @IsString()
+  @ApiProperty({ description: 'Nome do cliente' })
+  @IsNotEmpty({ message: 'Nome é obrigatório' })
+  @IsString({ message: 'Nome deve ser uma string' })
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
   name: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Email do cliente', required: false })
   @IsOptional()
-  @IsEmail()
+  @IsEmail({}, { message: 'Email deve ter um formato válido' })
+  @Transform(({ value }) => value === '' ? undefined : value)
   email?: string;
 
-  @ApiProperty()
-  @IsString()
+  @ApiProperty({ description: 'Telefone do cliente' })
+  @IsNotEmpty({ message: 'Telefone é obrigatório' })
+  @IsString({ message: 'Telefone deve ser uma string' })
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
   phone: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ description: 'CPF do cliente', required: false })
   @IsOptional()
-  @IsString()
+  @IsString({ message: 'CPF deve ser uma string' })
+  @Transform(({ value }) => value === '' ? undefined : value)
   cpf?: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ description: 'CNPJ do cliente', required: false })
   @IsOptional()
-  @IsString()
+  @IsString({ message: 'CNPJ deve ser uma string' })
+  @Transform(({ value }) => value === '' ? undefined : value)
   cnpj?: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ description: 'Endereço do cliente', required: false })
   @IsOptional()
-  @IsString()
+  @IsString({ message: 'Endereço deve ser uma string' })
+  @Transform(({ value }) => value === '' ? undefined : value)
   address?: string;
 }
 
 export class UpdateClientDto extends CreateClientDto {
-  @ApiProperty({ required: false })
+  @ApiProperty({ description: 'Status ativo do cliente', required: false })
   @IsOptional()
-  @IsBoolean()
+  @IsBoolean({ message: 'isActive deve ser um boolean' })
   isActive?: boolean;
 }
