@@ -14,6 +14,7 @@ import {
     Logger,
     ValidationPipe,
     UsePipes,
+    BadRequestException,
   } from '@nestjs/common';
   import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
   import { ClientService } from './client.service';
@@ -34,37 +35,59 @@ import {
     @ApiResponse({ status: 201, description: 'Cliente criado com sucesso.' })
     @ApiResponse({ status: 400, description: 'Dados inválidos.' })
     @ApiResponse({ status: 401, description: 'Não autorizado.' })
-    @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+    @UsePipes(new ValidationPipe({ 
+        transform: true, 
+        whitelist: true, 
+        skipMissingProperties: true,
+        forbidNonWhitelisted: true,
+        exceptionFactory: (errors) => {
+            Logger.error('Validation errors:', JSON.stringify(errors, null, 2), 'ValidationPipe');
+            const messages = errors.map(error => 
+                Object.values(error.constraints || {}).join(', ')
+            ).join('; ');
+            return new BadRequestException(`Dados inválidos: ${messages}`);
+        }
+    }))
     async create(@Body() createClientDto: CreateClientDto, @Request() req) {
-      this.logger.debug('=== CREATE CLIENT CONTROLLER DEBUG ===');
-      this.logger.debug('Request headers:', JSON.stringify(req.headers, null, 2));
-      this.logger.debug('Raw body received:', JSON.stringify(req.body, null, 2));
-      this.logger.debug('Parsed DTO:', JSON.stringify(createClientDto, null, 2));
-      this.logger.debug('User from request:', JSON.stringify(req.user, null, 2));
-      this.logger.debug('Content-Type:', req.headers['content-type']);
-      
-      // Verificar se o body está sendo parseado corretamente
-      if (!createClientDto) {
+        this.logger.debug('=== CREATE CLIENT CONTROLLER DEBUG ===');
+        this.logger.debug('Request headers:', JSON.stringify(req.headers, null, 2));
+        this.logger.debug('Raw body received:', JSON.stringify(req.body, null, 2));
+        this.logger.debug('Parsed DTO:', JSON.stringify(createClientDto, null, 2));
+        this.logger.debug('User from request:', JSON.stringify(req.user, null, 2));
+        this.logger.debug('Content-Type:', req.headers['content-type']);
+        
+        // Verificações adicionais de segurança
+        if (!createClientDto) {
         this.logger.error('CreateClientDto is null or undefined');
-        throw new Error('Invalid request body');
-      }
-  
-      // Verificar se os campos obrigatórios estão presentes
-      const requiredFields = ['name', 'phone'];
-      const missingFields = requiredFields.filter(field => !createClientDto[field]);
-      
-      if (missingFields.length > 0) {
-        this.logger.error('Missing required fields:', missingFields);
-      }
-  
-      try {
+        throw new BadRequestException('Dados do cliente são obrigatórios');
+        }
+
+        if (!createClientDto.name || createClientDto.name.trim().length === 0) {
+        this.logger.error('Client name is missing or empty');
+        throw new BadRequestException('Nome do cliente é obrigatório');
+        }
+
+        if (!createClientDto.phone || createClientDto.phone.trim().length === 0) {
+        this.logger.error('Client phone is missing or empty');
+        throw new BadRequestException('Telefone do cliente é obrigatório');
+        }
+
+        // Validar formato do email se fornecido
+        if (createClientDto.email && createClientDto.email.trim() !== '') {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(createClientDto.email)) {
+            throw new BadRequestException('Formato de email inválido');
+        }
+        }
+
+        try {
         const result = await this.clientService.create(createClientDto, req.user.id);
         this.logger.debug('Client created successfully:', result.id);
         return result;
-      } catch (error) {
+        } catch (error) {
         this.logger.error('Error in create controller:', error);
         throw error;
-      }
+        }
     }
   
     @Get()
@@ -194,26 +217,47 @@ import {
     @ApiResponse({ status: 403, description: 'Sem permissão para atualizar este cliente.' })
     @ApiResponse({ status: 400, description: 'Dados inválidos.' })
     @ApiResponse({ status: 401, description: 'Não autorizado.' })
-    @UsePipes(new ValidationPipe({ transform: true, whitelist: true, skipMissingProperties: true }))
+    @UsePipes(new ValidationPipe({ 
+        transform: true, 
+        whitelist: true, 
+        skipMissingProperties: true,
+        forbidNonWhitelisted: true,
+        exceptionFactory: (errors) => {
+            Logger.error('Validation errors:', JSON.stringify(errors, null, 2), 'ValidationPipe');
+            const messages = errors.map(error => 
+                Object.values(error.constraints || {}).join(', ')
+            ).join('; ');
+            return new BadRequestException(`Dados inválidos: ${messages}`);
+        }
+    }))
     async update(
-      @Param('id') id: string,
-      @Body() updateClientDto: UpdateClientDto,
-      @Request() req,
+        @Param('id') id: string,
+        @Body() updateClientDto: UpdateClientDto,
+        @Request() req,
     ) {
-      this.logger.debug('=== UPDATE CLIENT CONTROLLER DEBUG ===');
-      this.logger.debug('Client ID:', id);
-      this.logger.debug('User ID:', req.user.id);
-      this.logger.debug('Raw body received:', JSON.stringify(req.body, null, 2));
-      this.logger.debug('Parsed DTO:', JSON.stringify(updateClientDto, null, 2));
-  
-      try {
+        this.logger.debug('=== UPDATE CLIENT CONTROLLER DEBUG ===');
+        this.logger.debug('Client ID:', id);
+        this.logger.debug('User ID:', req.user.id);
+        this.logger.debug('Raw body received:', JSON.stringify(req.body, null, 2));
+        this.logger.debug('Parsed DTO:', JSON.stringify(updateClientDto, null, 2));
+
+        // Verificar se pelo menos um campo foi fornecido
+        const hasValidFields = Object.keys(updateClientDto).some(key => 
+        updateClientDto[key] !== undefined && updateClientDto[key] !== null
+        );
+
+        if (!hasValidFields) {
+        throw new BadRequestException('Pelo menos um campo deve ser fornecido para atualização');
+        }
+
+        try {
         const result = await this.clientService.update(id, updateClientDto, req.user.id);
         this.logger.debug('Client updated successfully');
         return result;
-      } catch (error) {
+        } catch (error) {
         this.logger.error('Error in update controller:', error);
         throw error;
-      }
+        }
     }
   
     @Patch(':id/toggle-active')
