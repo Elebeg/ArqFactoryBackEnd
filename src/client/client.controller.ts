@@ -11,17 +11,22 @@ import {
     Query,
     HttpCode,
     HttpStatus,
+    Logger,
+    ValidationPipe,
+    UsePipes,
   } from '@nestjs/common';
   import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
   import { ClientService } from './client.service';
   import { CreateClientDto, UpdateClientDto } from './dto/client-dto';
-  import { JwtAuthGuard } from '../auth/guards/auth.guard'; 
+  import { JwtAuthGuard } from '../auth/guards/auth.guard';
   
   @ApiTags('clients')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Controller('clients')
   export class ClientController {
+    private readonly logger = new Logger(ClientController.name);
+  
     constructor(private readonly clientService: ClientService) {}
   
     @Post()
@@ -29,8 +34,37 @@ import {
     @ApiResponse({ status: 201, description: 'Cliente criado com sucesso.' })
     @ApiResponse({ status: 400, description: 'Dados inválidos.' })
     @ApiResponse({ status: 401, description: 'Não autorizado.' })
+    @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
     async create(@Body() createClientDto: CreateClientDto, @Request() req) {
-      return await this.clientService.create(createClientDto, req.user.id);
+      this.logger.debug('=== CREATE CLIENT CONTROLLER DEBUG ===');
+      this.logger.debug('Request headers:', JSON.stringify(req.headers, null, 2));
+      this.logger.debug('Raw body received:', JSON.stringify(req.body, null, 2));
+      this.logger.debug('Parsed DTO:', JSON.stringify(createClientDto, null, 2));
+      this.logger.debug('User from request:', JSON.stringify(req.user, null, 2));
+      this.logger.debug('Content-Type:', req.headers['content-type']);
+      
+      // Verificar se o body está sendo parseado corretamente
+      if (!createClientDto) {
+        this.logger.error('CreateClientDto is null or undefined');
+        throw new Error('Invalid request body');
+      }
+  
+      // Verificar se os campos obrigatórios estão presentes
+      const requiredFields = ['name', 'phone'];
+      const missingFields = requiredFields.filter(field => !createClientDto[field]);
+      
+      if (missingFields.length > 0) {
+        this.logger.error('Missing required fields:', missingFields);
+      }
+  
+      try {
+        const result = await this.clientService.create(createClientDto, req.user.id);
+        this.logger.debug('Client created successfully:', result.id);
+        return result;
+      } catch (error) {
+        this.logger.error('Error in create controller:', error);
+        throw error;
+      }
     }
   
     @Get()
@@ -38,7 +72,18 @@ import {
     @ApiResponse({ status: 200, description: 'Lista de clientes retornada com sucesso.' })
     @ApiResponse({ status: 401, description: 'Não autorizado.' })
     async findAll(@Request() req) {
-      return await this.clientService.findAll(req.user.id);
+      this.logger.debug('=== FIND ALL CONTROLLER DEBUG ===');
+      this.logger.debug('User from request:', JSON.stringify(req.user, null, 2));
+      this.logger.debug('Request headers:', req.headers.authorization ? 'Authorization header present' : 'No authorization header');
+  
+      try {
+        const result = await this.clientService.findAll(req.user.id);
+        this.logger.debug(`Controller returning ${result.length} clients`);
+        return result;
+      } catch (error) {
+        this.logger.error('Error in findAll controller:', error);
+        throw error;
+      }
     }
   
     @Get('active')
@@ -46,7 +91,17 @@ import {
     @ApiResponse({ status: 200, description: 'Lista de clientes ativos retornada com sucesso.' })
     @ApiResponse({ status: 401, description: 'Não autorizado.' })
     async findActiveClients(@Request() req) {
-      return await this.clientService.findActiveClients(req.user.id);
+      this.logger.debug('=== FIND ACTIVE CLIENTS CONTROLLER DEBUG ===');
+      this.logger.debug('User ID:', req.user.id);
+  
+      try {
+        const result = await this.clientService.findActiveClients(req.user.id);
+        this.logger.debug(`Controller returning ${result.length} active clients`);
+        return result;
+      } catch (error) {
+        this.logger.error('Error in findActiveClients controller:', error);
+        throw error;
+      }
     }
   
     @Get('search')
@@ -55,7 +110,18 @@ import {
     @ApiResponse({ status: 200, description: 'Resultados da busca retornados com sucesso.' })
     @ApiResponse({ status: 401, description: 'Não autorizado.' })
     async searchClients(@Query('q') query: string, @Request() req) {
-      return await this.clientService.searchClients(query, req.user.id);
+      this.logger.debug('=== SEARCH CLIENTS CONTROLLER DEBUG ===');
+      this.logger.debug('Search query:', query);
+      this.logger.debug('User ID:', req.user.id);
+  
+      try {
+        const result = await this.clientService.searchClients(query, req.user.id);
+        this.logger.debug(`Search returned ${result.length} clients`);
+        return result;
+      } catch (error) {
+        this.logger.error('Error in searchClients controller:', error);
+        throw error;
+      }
     }
   
     @Get(':id')
@@ -65,7 +131,18 @@ import {
     @ApiResponse({ status: 403, description: 'Sem permissão para acessar este cliente.' })
     @ApiResponse({ status: 401, description: 'Não autorizado.' })
     async findOne(@Param('id') id: string, @Request() req) {
-      return await this.clientService.findOne(id, req.user.id);
+      this.logger.debug('=== FIND ONE CONTROLLER DEBUG ===');
+      this.logger.debug('Client ID:', id);
+      this.logger.debug('User ID:', req.user.id);
+  
+      try {
+        const result = await this.clientService.findOne(id, req.user.id);
+        this.logger.debug('Client found successfully');
+        return result;
+      } catch (error) {
+        this.logger.error('Error in findOne controller:', error);
+        throw error;
+      }
     }
   
     @Get(':id/projects')
@@ -75,7 +152,18 @@ import {
     @ApiResponse({ status: 403, description: 'Sem permissão para acessar este cliente.' })
     @ApiResponse({ status: 401, description: 'Não autorizado.' })
     async findClientProjects(@Param('id') id: string, @Request() req) {
-      return await this.clientService.findClientProjects(id, req.user.id);
+      this.logger.debug('=== FIND CLIENT PROJECTS CONTROLLER DEBUG ===');
+      this.logger.debug('Client ID:', id);
+      this.logger.debug('User ID:', req.user.id);
+  
+      try {
+        const result = await this.clientService.findClientProjects(id, req.user.id);
+        this.logger.debug(`Found ${result?.length || 0} projects`);
+        return result;
+      } catch (error) {
+        this.logger.error('Error in findClientProjects controller:', error);
+        throw error;
+      }
     }
   
     @Get(':id/budgets')
@@ -85,7 +173,18 @@ import {
     @ApiResponse({ status: 403, description: 'Sem permissão para acessar este cliente.' })
     @ApiResponse({ status: 401, description: 'Não autorizado.' })
     async findClientBudgets(@Param('id') id: string, @Request() req) {
-      return await this.clientService.findClientBudgets(id, req.user.id);
+      this.logger.debug('=== FIND CLIENT BUDGETS CONTROLLER DEBUG ===');
+      this.logger.debug('Client ID:', id);
+      this.logger.debug('User ID:', req.user.id);
+  
+      try {
+        const result = await this.clientService.findClientBudgets(id, req.user.id);
+        this.logger.debug(`Found ${result?.length || 0} budgets`);
+        return result;
+      } catch (error) {
+        this.logger.error('Error in findClientBudgets controller:', error);
+        throw error;
+      }
     }
   
     @Patch(':id')
@@ -95,12 +194,26 @@ import {
     @ApiResponse({ status: 403, description: 'Sem permissão para atualizar este cliente.' })
     @ApiResponse({ status: 400, description: 'Dados inválidos.' })
     @ApiResponse({ status: 401, description: 'Não autorizado.' })
+    @UsePipes(new ValidationPipe({ transform: true, whitelist: true, skipMissingProperties: true }))
     async update(
       @Param('id') id: string,
       @Body() updateClientDto: UpdateClientDto,
       @Request() req,
     ) {
-      return await this.clientService.update(id, updateClientDto, req.user.id);
+      this.logger.debug('=== UPDATE CLIENT CONTROLLER DEBUG ===');
+      this.logger.debug('Client ID:', id);
+      this.logger.debug('User ID:', req.user.id);
+      this.logger.debug('Raw body received:', JSON.stringify(req.body, null, 2));
+      this.logger.debug('Parsed DTO:', JSON.stringify(updateClientDto, null, 2));
+  
+      try {
+        const result = await this.clientService.update(id, updateClientDto, req.user.id);
+        this.logger.debug('Client updated successfully');
+        return result;
+      } catch (error) {
+        this.logger.error('Error in update controller:', error);
+        throw error;
+      }
     }
   
     @Patch(':id/toggle-active')
@@ -111,7 +224,18 @@ import {
     @ApiResponse({ status: 401, description: 'Não autorizado.' })
     @HttpCode(HttpStatus.OK)
     async toggleActive(@Param('id') id: string, @Request() req) {
-      return await this.clientService.toggleActive(id, req.user.id);
+      this.logger.debug('=== TOGGLE ACTIVE CONTROLLER DEBUG ===');
+      this.logger.debug('Client ID:', id);
+      this.logger.debug('User ID:', req.user.id);
+  
+      try {
+        const result = await this.clientService.toggleActive(id, req.user.id);
+        this.logger.debug('Client status toggled successfully');
+        return result;
+      } catch (error) {
+        this.logger.error('Error in toggleActive controller:', error);
+        throw error;
+      }
     }
   
     @Delete(':id')
@@ -122,6 +246,16 @@ import {
     @ApiResponse({ status: 401, description: 'Não autorizado.' })
     @HttpCode(HttpStatus.NO_CONTENT)
     async remove(@Param('id') id: string, @Request() req) {
-      await this.clientService.remove(id, req.user.id);
+      this.logger.debug('=== REMOVE CLIENT CONTROLLER DEBUG ===');
+      this.logger.debug('Client ID:', id);
+      this.logger.debug('User ID:', req.user.id);
+  
+      try {
+        await this.clientService.remove(id, req.user.id);
+        this.logger.debug('Client removed successfully');
+      } catch (error) {
+        this.logger.error('Error in remove controller:', error);
+        throw error;
+      }
     }
   }
