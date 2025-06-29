@@ -2,7 +2,7 @@ import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateCol
 import { User } from '../../user/entities/user.entity';
 import { Client } from '../../client/entities/client.entity';
 import { Budget } from '../../budget/entities/budget.entity';
-import { ProjectAssignment } from '../../project-assignment/entities/project-assignment.entity';
+import { ProjectTask } from './project-task.entity';
 import { CalendarEvent } from '../../calendar-event/entities/calendar-event.entity';
 
 export enum ProjectStatus {
@@ -70,8 +70,8 @@ export class Project {
   @OneToMany(() => Budget, budget => budget.project)
   budgets: Budget[];
 
-  @OneToMany(() => ProjectAssignment, assignment => assignment.project)
-  assignments: ProjectAssignment[];
+  @OneToMany(() => ProjectTask, task => task.project)
+  task: ProjectTask[];
 
   @OneToMany(() => CalendarEvent, event => event.project)
   calendarEvents: CalendarEvent[];
