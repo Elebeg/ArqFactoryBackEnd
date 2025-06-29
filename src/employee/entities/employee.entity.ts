@@ -1,6 +1,6 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
-import { ProjectAssignment } from '../../project/entities/project-task.entity';
+import { ProjectTask } from '../../project/entities/project-task.entity';
 import { CalendarEvent } from '../../calendar-event/entities/calendar-event.entity';
 
 export enum EmployeeRole {
@@ -41,8 +41,8 @@ export class Employee {
   @JoinColumn({ name: 'created_by' })
   creator: User;
 
-  @OneToMany(() => ProjectAssignment, assignment => assignment.employee)
-  projectAssignments: ProjectAssignment[];
+  @OneToMany(() => ProjectTask, task => task.assignee)
+  projectTask: ProjectTask[];
 
   @OneToMany(() => CalendarEvent, event => event.assignedEmployee)
   calendarEvents: CalendarEvent[];
