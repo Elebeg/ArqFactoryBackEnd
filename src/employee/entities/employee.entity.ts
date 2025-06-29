@@ -1,6 +1,6 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
-import { ProjectAssignment } from '../../project-assignment/entities/project-assignment.entity';
+import { ProjectAssignment } from '../../project/entities/project-task.entity';
 import { CalendarEvent } from '../../calendar-event/entities/calendar-event.entity';
 
 export enum EmployeeRole {
